@@ -1,0 +1,91 @@
+  services:
+
+    # ==========================================
+    # MYSQL
+    # ==========================================
+
+    mysql:
+      image: mysql:8.0
+      container_name: authhub-mysql
+      restart: unless-stopped
+
+      environment:
+        MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+        MYSQL_DATABASE: authhub
+        MYSQL_USER: ${MYSQL_USER}
+        MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+
+      ports:
+        - "3308:3306"
+
+      volumes:
+        - mysql_data:/var/lib/mysql
+
+      networks:
+        - authhub-network
+
+
+    # ==========================================
+    # BACKEND - SPRING BOOT
+    # ==========================================
+
+    backend:
+      build:
+        context: ./authhub
+
+      image: authhub-backend
+      container_name: authhub-backend
+      restart: unless-stopped
+
+      environment:
+        DATABASE_URL: jdbc:mysql://authhub-mysql:3306/authhub?createDatabaseIfNotExist=true&useTimezone=true&serverTimezone=UTC
+        DATABASE_USER: ${MYSQL_USER}
+        DATABASE_PASSWORD: ${MYSQL_PASSWORD}
+        JWT_SECRET: ${JWT_SECRET}
+      ports:
+        - "8088:8080"
+
+      depends_on:
+        - mysql
+
+      networks:
+        - authhub-network
+
+
+    # ==========================================
+    # FRONTEND - REACT + NGINX
+    # ==========================================
+
+    frontend:
+      build:
+        context: ./authhub-frontend
+
+      image: authhub-frontend
+      container_name: authhub-frontend
+      restart: unless-stopped
+
+      ports:
+        - "8087:80"
+
+      depends_on:
+        - backend
+
+      networks:
+        - authhub-network
+
+
+  # ==========================================
+  # NETWORK
+  # ==========================================
+
+  networks:
+    authhub-network:
+
+
+  # ==========================================
+  # VOLUME
+  # ==========================================
+
+  volumes:
+    mysql_data:
+
